@@ -1,1 +1,20 @@
-
+{
+    "project": "Mamaearth Returns & Growth Intelligence Pipeline",
+    "cleaned_total_revenue_inr": 97358.3,
+    "raw_total_revenue_inr": 99860.2,
+    "duplicate_reconciliation_delta_inr": 2501.9,
+    "orders_before_cleaning": 180,
+    "orders_after_duplicate_removal": 175,
+    "return_rate_by_payment": {
+        "COD": 44.4,
+        "UPI": 18.9,
+        "CARD": 14.7
+    },
+    "highest_risk_segment": {
+        "payment_method": "COD",
+        "city_tier": 2,
+        "return_rate_pct": 54.5
+    },
+    "true_peak_month": "2026-03",
+    "true_peak_revenue_inr": 20318.9
+}

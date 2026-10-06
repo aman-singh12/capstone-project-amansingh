@@ -1,4 +1,4 @@
--- Massai Mamaearth Returns & Growth Intelligence Pipeline capstone project
+-- Masai Mamaearth Returns & Growth Intelligence Pipeline capstone project
 -- Seed data loader for SQLite
 -- Run this script from the repository root.
 --

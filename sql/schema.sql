@@ -1,4 +1,4 @@
--- Massai Mamaearth Returns and Growth Intelligence Pipeline capston project
+-- Masai Mamaearth Returns and Growth Intelligence Pipeline Capstone Project
 -- SQL relational layer
 
 PRAGMA foreign_keys = ON;
