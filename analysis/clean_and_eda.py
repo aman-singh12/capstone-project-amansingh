@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pandas as pd
 
 # ============================================================
@@ -300,3 +303,127 @@ print("Cleaned orders   :", len(df))
 print(f"Raw revenue      : ₹{raw_revenue:,.2f}")
 print(f"Cleaned revenue  : ₹{cleaned_revenue:,.2f}")
 print(f"Revenue difference: ₹{revenue_difference:,.2f}")
+# ------------------------------------------------------------
+# 18. Generate verified findings.json for GenAI layer
+# ------------------------------------------------------------
+
+# Highest-risk payment + city-tier segment
+highest_risk_segment = payment_tier.idxmax()
+highest_risk_rate = float(payment_tier.max())
+
+highest_risk_payment = highest_risk_segment[0]
+highest_risk_city_tier = int(highest_risk_segment[1])
+
+
+# Convert payment return rates to a JSON-friendly dictionary
+return_rate_dict = {
+    payment: float(rate)
+    for payment, rate in return_rate_by_payment.items()
+}
+
+
+# Identify the month most inflated by quantity outliers
+outlier_impact = (
+    monthly_revenue
+    .subtract(corrected_monthly_revenue, fill_value=0)
+    .round(2)
+)
+
+outlier_inflated_month = outlier_impact.idxmax()
+
+apparent_revenue = float(
+    monthly_revenue.loc[outlier_inflated_month]
+)
+
+corrected_revenue = float(
+    corrected_monthly_revenue.loc[outlier_inflated_month]
+)
+
+
+# Identify the true revenue peak after outlier correction
+true_peak_month = corrected_monthly_revenue.idxmax()
+
+true_peak_revenue = float(
+    corrected_monthly_revenue.loc[true_peak_month]
+)
+
+
+# Build the verified findings dictionary
+findings = {
+    "project": "Mamaearth Returns & Growth Intelligence Pipeline",
+
+    "cleaned_total_revenue_inr": round(
+        float(cleaned_revenue),
+        2
+    ),
+
+    "raw_total_revenue_inr": round(
+        float(raw_revenue),
+        2
+    ),
+
+    "duplicate_reconciliation_delta_inr": round(
+        float(revenue_difference),
+        2
+    ),
+
+    "orders_before_cleaning": int(
+        len(raw_orders)
+    ),
+
+    "orders_after_duplicate_removal": int(
+        len(df)
+    ),
+
+    "return_rate_by_payment": return_rate_dict,
+
+    "highest_risk_segment": {
+        "payment_method": highest_risk_payment,
+        "city_tier": highest_risk_city_tier,
+        "return_rate_pct": highest_risk_rate
+    },
+
+    "true_peak_month": str(
+        true_peak_month
+    ),
+
+    "true_peak_revenue_inr": round(
+        true_peak_revenue,
+        2
+    ),
+
+    "outlier_inflated_month": {
+        "month": str(
+            outlier_inflated_month
+        ),
+        "apparent_revenue_inr": round(
+            apparent_revenue,
+            2
+        ),
+        "corrected_revenue_inr": round(
+            corrected_revenue,
+            2
+        )
+    }
+}
+
+
+# Save findings.json inside the narrator folder
+BASE_DIR = Path(__file__).resolve().parent.parent
+FINDINGS_PATH = BASE_DIR / "narrator" / "findings.json"
+
+with open(
+    FINDINGS_PATH,
+    "w",
+    encoding="utf-8"
+) as file:
+    json.dump(
+        findings,
+        file,
+        indent=4
+    )
+
+
+print("\n=== FINDINGS.JSON GENERATED ===")
+print(json.dumps(findings, indent=4))
+print(f"\nSaved findings to: {FINDINGS_PATH}")

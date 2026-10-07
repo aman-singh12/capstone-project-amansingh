@@ -21,263 +21,16 @@ FINDINGS_PATH = NARRATOR_DIR / "findings.json"
 # 1. Load raw data
 # ============================================================
 
-customers = pd.read_csv(DATA_DIR / "customers.csv")
-products = pd.read_csv(DATA_DIR / "products.csv")
-orders = pd.read_csv(DATA_DIR / "orders.csv")
-
-
-# ============================================================
-# 2. Clean data using the same rules as the Python EDA layer
-# ============================================================
-
-orders["payment_method"] = (
-    orders["payment_method"]
-    .str.strip()
-    .str.upper()
-)
-
-orders["discount_pct"] = pd.to_numeric(
-    orders["discount_pct"],
-    errors="coerce"
-)
-
-orders["rating"] = pd.to_numeric(
-    orders["rating"],
-    errors="coerce"
-)
-
-
-# Natural duplicate key — order_id deliberately excluded
-duplicate_key = [
-    "customer_id",
-    "product_id",
-    "order_date",
-    "quantity",
-    "discount_pct",
-    "payment_method",
-    "rating",
-    "returned"
-]
-
-orders = orders.drop_duplicates(
-    subset=duplicate_key,
-    keep="first"
-).copy()
-
-
-# Imputation
-orders["discount_pct"] = orders["discount_pct"].fillna(0)
-
-orders["rating"] = orders["rating"].fillna(
-    orders["rating"].median()
-)
-
-
-# ============================================================
-# 3. Merge orders, products and customers
-# ============================================================
-
-df = orders.merge(
-    products,
-    on="product_id",
-    how="left"
-)
-
-df = df.merge(
-    customers,
-    on="customer_id",
-    how="left"
-)
-
-
-# ============================================================
-# 4. Calculate order value
-# ============================================================
-
-df["order_value"] = (
-    df["quantity"]
-    * df["price"]
-    * (1 - df["discount_pct"] / 100.0)
-)
-
-cleaned_total_revenue = round(
-    df["order_value"].sum(),
-    2
-)
-
-
-# ============================================================
-# 5. Calculate raw revenue for reconciliation
-# ============================================================
-
-raw_orders = pd.read_csv(DATA_DIR / "orders.csv")
-
-raw_orders["discount_pct"] = pd.to_numeric(
-    raw_orders["discount_pct"],
-    errors="coerce"
-).fillna(0)
-
-raw_df = raw_orders.merge(
-    products,
-    on="product_id",
-    how="left"
-)
-
-raw_df["order_value"] = (
-    raw_df["quantity"]
-    * raw_df["price"]
-    * (1 - raw_df["discount_pct"] / 100.0)
-)
-
-raw_total_revenue = round(
-    raw_df["order_value"].sum(),
-    2
-)
-
-duplicate_reconciliation_delta = round(
-    raw_total_revenue - cleaned_total_revenue,
-    2
-)
-
-
-# ============================================================
-# 6. Return rate by payment method
-# ============================================================
-
-return_rate_by_payment = (
-    df.groupby("payment_method")["returned"]
-    .mean()
-    .mul(100)
-    .round(1)
-    .sort_values(ascending=False)
-)
-
-return_rate_dict = {
-    payment: float(rate)
-    for payment, rate in return_rate_by_payment.items()
-}
-
-
-# ============================================================
-# 7. Highest-risk payment + city-tier segment
-# ============================================================
-
-payment_tier = (
-    df.groupby(
-        ["payment_method", "city_tier"]
-    )["returned"]
-    .mean()
-    .mul(100)
-    .round(1)
-)
-
-highest_risk_segment = payment_tier.idxmax()
-highest_risk_rate = float(
-    payment_tier.max()
-)
-
-highest_risk_payment = highest_risk_segment[0]
-highest_risk_city_tier = int(
-    highest_risk_segment[1]
-)
-
-
-# ============================================================
-# 8. Quantity outlier detection
-# ============================================================
-
-q1 = df["quantity"].quantile(0.25)
-q3 = df["quantity"].quantile(0.75)
-
-iqr = q3 - q1
-
-lower_bound = q1 - 1.5 * iqr
-upper_bound = q3 + 1.5 * iqr
-
-df["quantity_outlier"] = (
-    (df["quantity"] < lower_bound)
-    | (df["quantity"] > upper_bound)
-)
-
-
-# ============================================================
-# 9. Corrected monthly revenue
-# ============================================================
-
-df["order_date"] = pd.to_datetime(
-    df["order_date"]
-)
-
-corrected_df = df.loc[
-    ~df["quantity_outlier"]
-].copy()
-
-monthly_revenue = (
-    corrected_df
-    .groupby(
-        corrected_df["order_date"].dt.to_period("M")
-    )["order_value"]
-    .sum()
-    .round(2)
-)
-
-true_peak_period = monthly_revenue.idxmax()
-true_peak_revenue = float(
-    monthly_revenue.max()
-)
-
-
-# ============================================================
-# 10. Build findings dictionary
-# ============================================================
-
-findings = {
-    "project": "Mamaearth Returns & Growth Intelligence Pipeline",
-
-    "cleaned_total_revenue_inr": cleaned_total_revenue,
-
-    "raw_total_revenue_inr": raw_total_revenue,
-
-    "duplicate_reconciliation_delta_inr": (
-        duplicate_reconciliation_delta
-    ),
-
-    "orders_before_cleaning": 180,
-
-    "orders_after_duplicate_removal": len(df),
-
-    "return_rate_by_payment": return_rate_dict,
-
-    "highest_risk_segment": {
-        "payment_method": highest_risk_payment,
-        "city_tier": highest_risk_city_tier,
-        "return_rate_pct": highest_risk_rate
-    },
-
-    "true_peak_month": str(true_peak_period),
-
-    "true_peak_revenue_inr": true_peak_revenue
-}
-
-
-# ============================================================
-# 11. Save findings.json
-# ============================================================
 
 with open(
     FINDINGS_PATH,
-    "w",
+    "r",
     encoding="utf-8"
 ) as file:
-    json.dump(
-        findings,
-        file,
-        indent=4
-    )
+    findings = json.load(file)
 
-print("=== FINDINGS GENERATED ===")
+print("=== FINDINGS LOADED ===")
 print(json.dumps(findings, indent=4))
-
 
 # ============================================================
 # 12. Offline fallback narrative
@@ -297,7 +50,7 @@ def generate_scr_narrative_offline(findings):
         "highest_risk_segment"
     ]
 
-    return f"""
+    narrative = f"""
 SITUATION
 
 The cleaned Mamaearth order dataset contains
@@ -334,6 +87,13 @@ use the cleaned dataset, while return-risk interventions
 should focus first on high-risk COD segments.
 """.strip()
 
+    return {
+        "success": True,
+        "narrative": narrative,
+        "error": None,
+        "source": "offline"
+    }
+
 
 # ============================================================
 # 13. Gemini narrative generation
@@ -357,9 +117,11 @@ def generate_scr_narrative(findings):
 
     try:
         from google import genai
+        from google.genai import types
 
         client = genai.Client(
-            api_key=api_key
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=15000)
         )
 
         system_instruction = """
@@ -402,7 +164,12 @@ narrative for regional operations and finance leadership.
             }
         )
 
-        return response.text.strip()
+        return {
+            "success": True,
+            "narrative": response.text.strip(),
+            "error": None,
+            "source": "gemini"
+        }
 
     except Exception as error:
         print("\nGemini generation failed.")
@@ -435,6 +202,8 @@ def validate_numeric_accuracy(
     Check whether the generated narrative preserves
     the key verified numbers.
     """
+    if isinstance(narrative, dict):
+        narrative = narrative["narrative"]
 
     required_numbers = [
         normalize_number(
@@ -490,6 +259,27 @@ validate_numeric_accuracy(
     narrative,
     findings
 )
+
+# ============================================================
+# 16. Save sample narrative output
+# ============================================================
+
+sample_output_path = NARRATOR_DIR / "sample_output.txt"
+
+with open(
+    sample_output_path,
+    "w",
+    encoding="utf-8"
+) as file:
+    if isinstance(narrative, dict):
+        file.write(narrative["narrative"])
+    else:
+        file.write(narrative)
+
+print(
+    f"\nSample output saved to: {sample_output_path}"
+)
+
 # ============================================================
 # 17. Final status
 # ============================================================

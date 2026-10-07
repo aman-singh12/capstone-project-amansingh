@@ -91,3 +91,12 @@ Verified Findings
      |
      v
 GenAI Executive Narrative
+
+## Reproducible Run Order
+
+Run the pipeline in the following order from the project root.
+
+### 1. Install dependencies
+
+```bash
+pip install -r requirements.txt

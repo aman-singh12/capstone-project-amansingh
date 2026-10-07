@@ -1,0 +1,34 @@
+SITUATION
+
+The cleaned Mamaearth order dataset contains
+175 valid orders.
+After removing duplicate records and applying the defined
+missing-value treatment, cleaned revenue is
+₹97,358.30.
+
+COMPLICATION
+
+The raw dataset reports revenue of
+₹99,860.20.
+The difference of
+₹2,501.90
+is explained by duplicate orders in the raw dataset.
+
+Returns are concentrated around COD transactions.
+COD has a return rate of 44.4%.
+The highest-risk segment is COD combined with city tier
+2, where the return rate is
+54.5%.
+
+RESOLUTION
+
+Operations should prioritize COD return reduction,
+especially in city tier 2.
+The corrected revenue analysis shows that
+2026-03 is the true revenue peak,
+with revenue of ₹20,318.90,
+after excluding the identified quantity outliers.
+
+The key business takeaway is that revenue reporting should
+use the cleaned dataset, while return-risk interventions
+should focus first on high-risk COD segments.
