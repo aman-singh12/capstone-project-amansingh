@@ -91,12 +91,171 @@ Verified Findings
      |
      v
 GenAI Executive Narrative
+```
 
-## Reproducible Run Order
+## 6. Reproducible Run Order
 
 Run the pipeline in the following order from the project root.
 
 ### 1. Install dependencies
 
-```bash
+```text
 pip install -r requirements.txt
+```
+
+### 2. Run SQL analysis
+
+Execute the SQL files in this order:
+
+```text
+sql/schema.sql
+sql/seed_data.sql
+sql/reports.sql
+```
+
+### 3. Run Python cleaning and EDA
+
+```text
+python analysis/clean_and_eda.py
+```
+
+This step:
+
+- Loads the raw CSV files
+- Validates dataset shapes
+- Standardizes payment methods
+- Removes duplicate orders
+- Handles missing discount and rating values
+- Calculates cleaned revenue
+- Reconciles raw and cleaned revenue
+- Detects quantity outliers
+- Calculates return rates
+- Calculates payment-method × city-tier return rates
+- Generates the monthly revenue analysis
+- Generates the verified `findings.json`
+
+The verified findings are saved to:
+
+```text
+narrator/findings.json
+```
+
+### 4. Generate visualizations
+
+```text
+python analysis/visualize.py
+```
+
+The required charts are saved in:
+
+```text
+visualizations/
+```
+
+### 5. Run the GenAI narrator
+
+```text
+python narrator/generate_narrative.py
+```
+
+The narrator reads the verified:
+
+```text
+narrator/findings.json
+```
+
+and generates an executive Situation-Complication-Resolution narrative.
+
+The generated sample narrative is automatically saved to:
+
+```text
+narrator/sample_output.txt
+```
+
+---
+
+## 7. GenAI and Offline Fallback
+
+The narrator supports Gemini through the `google-genai` package.
+
+If the `GEMINI_API_KEY` environment variable is available, the program attempts to generate the executive narrative using Gemini.
+
+If the API key is unavailable or the Gemini request fails, the program automatically uses a deterministic offline fallback narrative.
+
+This allows the complete pipeline to run without requiring a Gemini API key.
+
+The narrator also performs numeric accuracy validation against the verified findings before saving the sample output.
+
+---
+
+## 8. Key Verified Findings
+
+The cleaned analysis produces the following key findings:
+
+- Raw revenue: ₹99,860.20
+- Cleaned revenue: ₹97,358.30
+- Revenue reconciliation difference: ₹2,501.90
+- Raw orders: 180
+- Cleaned orders: 175
+- COD return rate: 44.4%
+- Highest-risk segment: COD + City Tier 2
+- Highest-risk segment return rate: 54.5%
+- True revenue peak: March 2026
+- True peak revenue: ₹20,318.90
+- Outlier-inflated month: January 2026
+- January apparent revenue: ₹29,582.10
+- January corrected revenue: ₹11,637.10
+
+---
+
+## 9. Complete Pipeline
+
+```text
+SQL
+  |
+  v
+Python Cleaning + EDA
+  |
+  v
+findings.json
+  |
+  v
+GenAI / Offline Narrator
+  |
+  v
+sample_output.txt
+```
+
+---
+
+## 10. Project Structure
+
+```text
+capstone-project-amansingh/
+|
+├── README.md
+├── requirements.txt
+|
+├── analysis/
+│   ├── clean_and_eda.py
+│   └── visualize.py
+|
+├── data/
+│   ├── customers.csv
+│   ├── products.csv
+│   └── orders.csv
+|
+├── narrator/
+│   ├── findings.json
+│   ├── generate_narrative.py
+│   └── sample_output.txt
+|
+├── sql/
+│   ├── schema.sql
+│   ├── seed_data.sql
+│   └── reports.sql
+|
+└── visualizations/
+    ├── return_rate_by_payment.png
+    └── monthly_revenue_trend.png
+```
