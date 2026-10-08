@@ -74,12 +74,17 @@ duplicate_mask = orders.duplicated(
     keep="first"
 )
 
+duplicate_order_ids = orders.loc[
+    duplicate_mask,
+    "order_id"
+].tolist()
+
 print("\n=== DUPLICATE CHECK ===")
 print("Duplicate rows found:", duplicate_mask.sum())
 
 if duplicate_mask.sum() > 0:
     print("Duplicate order IDs:")
-    print(orders.loc[duplicate_mask, "order_id"].tolist())
+    print(duplicate_order_ids)
 
 
 # ------------------------------------------------------------
@@ -167,10 +172,29 @@ raw_revenue = raw_df["order_value"].sum()
 
 revenue_difference = raw_revenue - cleaned_revenue
 
+# Independently calculate revenue contributed by the
+# five duplicate orders that were removed.
+dropped_duplicate_revenue = raw_df[
+    raw_df["order_id"].isin(duplicate_order_ids)
+]["order_value"].sum()
+
 print("\n=== REVENUE RECONCILIATION ===")
-print(f"Raw revenue    : ₹{raw_revenue:,.2f}")
-print(f"Cleaned revenue: ₹{cleaned_revenue:,.2f}")
-print(f"Difference     : ₹{revenue_difference:,.2f}")
+print(f"Raw revenue              : ₹{raw_revenue:,.2f}")
+print(f"Cleaned revenue          : ₹{cleaned_revenue:,.2f}")
+print(f"Revenue difference       : ₹{revenue_difference:,.2f}")
+print(
+    f"Dropped duplicate revenue: "
+    f"₹{dropped_duplicate_revenue:,.2f}"
+)
+
+reconciliation_check = (
+    abs(revenue_difference - dropped_duplicate_revenue) < 0.01
+)
+
+print(
+    "Duplicate revenue reconciliation: "
+    f"{'PASSED' if reconciliation_check else 'FAILED'}"
+)
 
 
 # ------------------------------------------------------------
@@ -292,6 +316,53 @@ corrected_monthly_revenue = (
 print("\n=== CORRECTED MONTHLY REVENUE ===")
 print(corrected_monthly_revenue)
 
+# Explain the January revenue distortion caused by quantity outliers.
+
+january_period = pd.Period("2026-01")
+
+january_outliers = outliers[
+    pd.to_datetime(outliers["order_date"]).dt.to_period("M")
+    == january_period
+]
+
+january_outlier_ids = january_outliers["order_id"].tolist()
+
+january_outlier_revenue = january_outliers["order_value"].sum()
+
+january_apparent_revenue = monthly_revenue.loc[january_period]
+
+january_corrected_revenue = corrected_monthly_revenue.loc[january_period]
+
+true_peak_month = corrected_monthly_revenue.idxmax()
+
+true_peak_revenue = corrected_monthly_revenue.max()
+
+print("\n=== JANUARY OUTLIER EXPLANATION ===")
+
+print(
+    f"January's apparent revenue lead was caused by "
+    f"quantity outliers {january_outlier_ids}."
+)
+
+print(
+    f"Revenue contributed by these January outliers: "
+    f"₹{january_outlier_revenue:,.2f}"
+)
+
+print(
+    f"January revenue before correction: "
+    f"₹{january_apparent_revenue:,.2f}"
+)
+
+print(
+    f"January revenue after outlier correction: "
+    f"₹{january_corrected_revenue:,.2f}"
+)
+
+print(
+    f"After outlier correction, {true_peak_month} is the true "
+    f"revenue peak with revenue of ₹{true_peak_revenue:,.2f}."
+)
 
 # ------------------------------------------------------------
 # 17. Final summary

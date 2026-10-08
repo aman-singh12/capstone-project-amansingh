@@ -88,10 +88,9 @@ should focus first on high-risk COD segments.
 """.strip()
 
     return {
-        "success": True,
+        "status": "success",
         "narrative": narrative,
-        "error": None,
-        "source": "offline"
+        "tokens": None
     }
 
 
@@ -165,10 +164,9 @@ narrative for regional operations and finance leadership.
         )
 
         return {
-            "success": True,
+            "status": "success",
             "narrative": response.text.strip(),
-            "error": None,
-            "source": "gemini"
+            "tokens": getattr(response.usage_metadata, "total_token_count", None)
         }
 
     except Exception as error:
@@ -261,7 +259,7 @@ validate_numeric_accuracy(
 )
 
 # ============================================================
-# 16. Save sample narrative output
+# 17. Save sample narrative output
 # ============================================================
 
 sample_output_path = NARRATOR_DIR / "sample_output.txt"
@@ -281,7 +279,7 @@ print(
 )
 
 # ============================================================
-# 17. Final status
+# 18. Final status
 # ============================================================
 
 print("\nNarrative generation completed successfully.")

@@ -144,7 +144,8 @@ JOIN orders o
 JOIN products p
     ON o.product_id = p.product_id
 GROUP BY c.customer_id, c.name
-ORDER BY total_revenue DESC;
+-- customer_id ASC provides a deterministic tie-break for equal revenue.
+ORDER BY total_revenue DESC, c.customer_id ASC;
 
 
 -- ============================================================
@@ -173,7 +174,7 @@ JOIN orders o
 JOIN products p
     ON o.product_id = p.product_id
 GROUP BY c.customer_id, c.name
-ORDER BY total_revenue DESC
+ORDER BY total_revenue DESC, c.customer_id ASC
 LIMIT 3 OFFSET 2;
 
 
